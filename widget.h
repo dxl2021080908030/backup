@@ -4,7 +4,15 @@
 #include <QWidget>
 #include <QMessageBox>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QList>
 #include <QFileDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QStandardPaths>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class widget; }
@@ -23,6 +31,7 @@ private slots:
     void on_button_BrowseBackup_clicked();
     void on_button_Backup_clicked();
     void on_button_Restore_clicked();
+    void on_button_BrowseRestoreFile_clicked();
 
 private:
     Ui::widget *ui;

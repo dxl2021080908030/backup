@@ -6,10 +6,11 @@ widget::widget(QWidget *parent)
     , ui(new Ui::widget)
 {
     ui->setupUi(this);
-    connect(ui->button_BrowseSource, SIGNAL(clicked(bool)), this, SLOT(on_button_BrowseSource_clicked()));
-        connect(ui->button_BrowseBackup, SIGNAL(clicked(bool)), this, SLOT(on_button_BrowseBackup_clicked()));
-        connect(ui->button_Backup, SIGNAL(clicked(bool)), this, SLOT(on_button_Backup_clicked()));
-        connect(ui->button_Restore, SIGNAL(clicked(bool)), this, SLOT(widget::on_button_Restore_clicked()));
+    connect(ui->button_BrowseSource, SIGNAL(released(bool)), this, SLOT(on_button_BrowseSource_clicked()));
+        connect(ui->button_BrowseBackup, SIGNAL(released(bool)), this, SLOT(on_button_BrowseBackup_clicked()));
+        connect(ui->button_Backup, SIGNAL(released(bool)), this, SLOT(on_button_Backup_clicked()));
+        connect(ui->button_BrowseRestoreFile,SIGNAL(released(bool)),this,SLOT(on_button_BrowseRestoreFile_clicked()));
+        connect(ui->button_Restore, SIGNAL(released(bool)), this, SLOT(on_button_Restore_clicked()));
 }
 
 widget::~widget()
@@ -20,63 +21,95 @@ widget::~widget()
 
 void widget::on_button_BrowseSource_clicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, tr("选择源目录"), ui->lineEdit_Source->text());
-    if (!dir.isEmpty()) {
-        ui->lineEdit_Source->setText(dir);
-    }
+    QFileDialog dialog(this, tr("选择备份数据"), ui->lineEdit_Source->text(), tr("所有文件 (*)"));
+    dialog.setFileMode(QFileDialog::ExistingFiles);
+    if (dialog.exec()) {
+        QStringList files = dialog.selectedFiles();
+        if (!files.isEmpty()) {
+            // 将文件路径转换为字符串，并在LineEdit中显示
+            ui->lineEdit_Source->setText(files.join(";"));
+        }
+    };
 }
-
 void widget::on_button_BrowseBackup_clicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, tr("选择备份目录"), ui->lineEdit_Backup->text());
-    if (!dir.isEmpty()) {
-        ui->lineEdit_Backup->setText(dir);
+    QString path = QFileDialog::getExistingDirectory(this, tr("选择备份目录"), ui->lineEdit_Backup->text());
+    if (!path.isEmpty()) {
+        ui->lineEdit_Backup->setText(path);
     }
 }
-
 void widget::on_button_Backup_clicked()
 {
-    QString sourceDir = ui->lineEdit_Source->text();
-    QString backupDir = ui->lineEdit_Backup->text();
-    if (sourceDir.isEmpty() || backupDir.isEmpty()) {
-        QMessageBox::information(this, tr("提示"), tr("请选择源目录和备份目录！"));
+    QString sourcePathsStr = ui->lineEdit_Source->text();
+    QString backupPath = ui->lineEdit_Backup->text();
+
+    if (sourcePathsStr.isEmpty() || backupPath.isEmpty()) {
+        QMessageBox::information(this, tr("提示"), tr("请选择源文件和备份目录！"));
         return;
     }
-    // 在这里调用备份函数
-    if (!QDir().mkpath(backupDir)) {
-            QMessageBox::critical(this, tr("错误"), tr("无法创建备份目录：%1").arg(backupDir));
-            return;
-        }
 
-        if (backupDirectory(sourceDir, backupDir)) {
-            QMessageBox::information(this, tr("成功"), tr("备份成功！"));
+    if (!QDir().mkpath(backupPath)) {
+        QMessageBox::critical(this, tr("错误"), tr("无法创建备份目录：%1").arg(backupPath));
+        return;
+    }
+
+    QStringList sourcePaths = sourcePathsStr.split(";");
+    bool success = true;
+
+    foreach (const QString &sourcePath, sourcePaths) {
+        QFileInfo fileInfo(sourcePath);
+        if (fileInfo.isFile()) {
+            // 处理单个文件
+            QString backupFile = backupPath + "/" + fileInfo.fileName();
+            if (!QFile::copy(sourcePath, backupFile)) {
+                success = false;
+                break;
+            }
         } else {
-            QMessageBox::critical(this, tr("错误"), tr("备份失败！"));
+            QMessageBox::warning(this, tr("警告"), tr("跳过非文件项：%1").arg(sourcePath));
         }
+    }
 
-    qDebug() << "备份源目录：" << sourceDir << "到备份目录：" << backupDir;
+    if (success) {
+        QMessageBox::information(this, tr("成功"), tr("备份成功！"));
+    } else {
+        QMessageBox::critical(this, tr("错误"), tr("备份失败！"));
+    }
 }
-
+void widget::on_button_BrowseRestoreFile_clicked()
+{
+    // 使用QFileDialog来选择一个或多个文件
+    QFileDialog dialog(this, tr("选择要恢复的文件"), ui->lineEdit_Backup->text(), tr("所有文件 (*)"));
+    dialog.setFileMode(QFileDialog::ExistingFiles); // 设置为选择一个或多个文件
+    if (dialog.exec()) {
+        QStringList files = dialog.selectedFiles();
+        if (!files.isEmpty()) {
+            // 将文件路径转换为字符串，并在LineEdit中显示
+            ui->lineEdit_Backup->setText(files.join(";"));
+        }
+    };
+}
 void widget::on_button_Restore_clicked()
 {
-    QString backupDir = ui->lineEdit_Backup->text();
-    QString restoreDir = ui->lineEdit_Source->text();
-    if (backupDir.isEmpty() || restoreDir.isEmpty()) {
-        QMessageBox::information(this, tr("提示"), tr("请选择备份目录和恢复目录！"));
-        return;
-    }
-    // 在这里调用恢复函数
-    if (!QDir().mkpath(restoreDir)) {
-            QMessageBox::critical(this, tr("错误"), tr("无法创建恢复目录：%1").arg(restoreDir));
+    QString backupPath = ui->lineEdit_Backup->text();
+        QString restorePath = ui->lineEdit_Source->text();
+        if (backupPath.isEmpty() || restorePath.isEmpty()) {
+            QMessageBox::information(this, tr("提示"), tr("请选择备份文件和恢复位置！"));
             return;
         }
 
-        if (restoreDirectory(backupDir, restoreDir)) {
-            QMessageBox::information(this, tr("成功"), tr("恢复成功！"));
+        QFileInfo fileInfo(backupPath);
+        if (fileInfo.isFile()) {
+            // 处理单个文件
+            QString restoreFile = restorePath + "/" + fileInfo.fileName();
+            if (QFile::copy(backupPath, restoreFile)) {
+                QMessageBox::information(this, tr("成功"), tr("恢复成功！"));
+            } else {
+                QMessageBox::critical(this, tr("错误"), tr("恢复失败！"));
+            }
         } else {
-            QMessageBox::critical(this, tr("错误"), tr("恢复失败！"));
+            QMessageBox::warning(this, tr("警告"), tr("备份路径不是一个有效的文件：%1").arg(backupPath));
         }
-    qDebug() << "从备份目录：" << backupDir << "恢复到：" << restoreDir;
 }
 bool widget::backupDirectory(const QString &sourceDir, const QString &backupDir)
 {

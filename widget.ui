@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>305</height>
+    <width>385</width>
+    <height>329</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -41,17 +41,28 @@
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>备份路径:</string>
+      <string>备份/恢复路径:</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit_Backup"/>
+    <widget class="QLineEdit" name="lineEdit_Backup">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QPushButton" name="button_BrowseBackup">
      <property name="text">
-      <string>浏览...</string>
+      <string>浏览备份路径</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="button_BrowseRestoreFile">
+     <property name="text">
+      <string>选择恢复文件</string>
      </property>
     </widget>
    </item>
